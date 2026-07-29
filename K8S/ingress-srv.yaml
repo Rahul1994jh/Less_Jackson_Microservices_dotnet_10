@@ -1,0 +1,197 @@
+# ============================================================================
+# INGRESS CONFIGURATION FOR ACME.COM
+# ============================================================================
+#
+# EXPLAIN LIKE I'M 5:
+# ==================
+# Imagine you have a house (your application) with different rooms (services).
+# The Ingress is like a super-smart receptionist at the front door who:
+#   1. Listens to visitors arriving (incoming web traffic)
+#   2. Looks at their request (what they want)
+#   3. Sends them to the right room (the correct service)
+#
+# Without Ingress:  Every person needs their own entrance
+# With Ingress:     One entrance, one receptionist handles everyone!
+#
+#
+# HOW IT WORKS - THE ARCHITECTURE:
+# =================================
+#
+#  INTERNET
+#    ↓
+#    ↓ (browser sends HTTP request to acme.com)
+#    ↓
+#  ┌─────────────────────────────────────┐
+#  │  LOAD BALANCER (cloud provider)     │ ← Routes traffic from internet
+#  │  (AWS/Azure/GCP external IP)        │   to your Kubernetes cluster
+#  └────────────┬────────────────────────┘
+#               ↓
+#  ┌─────────────────────────────────────┐
+#  │  KUBERNETES CLUSTER                 │
+#  │  ┌─────────────────────────────────┐│
+#  │  │ NGINX INGRESS CONTROLLER         ││ ← This is a special Pod
+#  │  │ (listens on port 80/443)         ││   that runs NGINX software
+#  │  │ (reads rules from this file)     ││
+#  │  └──────────┬──────────────────────┘│
+#  │             ↓                        │
+#  │  ┌──────────────────────────────────┤
+#  │  │ INGRESS RULE (this file)         │
+#  │  │ /api/platforms → platform svc    │
+#  │  │ /api/command/... → command svc   │
+#  │  └──────────┬───────────────────────┤
+#  │             ↓                        │
+#  │  ┌──────────────────────────────────┤
+#  │  │ KUBERNETES SERVICES (Port 8080)  │
+#  │  │                                  │
+#  │  │ ┌─────────────────────────────┐  │
+#  │  │ │ Platform Service            │  │
+#  │  │ │ (routes to Platform Pods)   │  │
+#  │  │ └─────────────────────────────┘  │
+#  │  │                                  │
+#  │  │ ┌─────────────────────────────┐  │
+#  │  │ │ Command Service             │  │
+#  │  │ │ (routes to Command Pods)    │  │
+#  │  │ └─────────────────────────────┘  │
+#  │  └──────────────────────────────────┤
+#  │             ↓                        │
+#  │  ┌──────────────────────────────────┤
+#  │  │ YOUR RUNNING APPLICATIONS       │
+#  │  │ (the actual code that handles   │
+#  │  │  requests and sends responses)  │
+#  │  └──────────────────────────────────┤
+#  └─────────────────────────────────────┘
+#
+#
+# WHAT YOU NEED TO MAKE THIS WORK:
+# ================================
+#
+# 1. LOAD BALANCER (Required - from your cloud provider)
+#    └─ Assigns an external IP address
+#    └─ Routes traffic from the internet INTO your cluster
+#    └─ Examples: AWS ELB, Azure Load Balancer, GCP Load Balancer
+#    └─ Usually created automatically by cloud providers
+#
+# 2. NGINX INGRESS CONTROLLER (Required - this is software that runs in K8s)
+#    └─ Install with: kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.x.x/deploy/static/provider/cloud/deploy.yaml
+#    └─ It's a Pod (small container) that runs NGINX web server
+#    └─ Reads this YAML file and applies the routing rules
+#    └─ Watches for changes and updates automatically
+#
+# 3. THIS INGRESS YAML FILE (you're reading it!)
+#    └─ Defines the rules for how traffic should be routed
+#    └─ Specifies which domain, which paths, which services
+#
+# 4. KUBERNETES SERVICES (must already exist)
+#    └─ platformservice-clusterip-srv must be running
+#    └─ commandservice-clusterip-srv must be running
+#    └─ They are ClusterIP services (internal only, not exposed to internet)
+#
+# 5. YOUR MICROSERVICES (must be running)
+#    └─ Platform microservice listening on port 8080
+#    └─ Command microservice listening on port 8080
+#    └─ Both must be running in Pods
+#
+#
+# FLOW EXAMPLE - A REAL REQUEST:
+# ===============================
+#
+# User types in browser: http://acme.com/api/platforms
+#
+# Step 1: Browser sends request to acme.com (DNS resolves to Load Balancer IP)
+# Step 2: Load Balancer receives it, sends to NGINX Ingress Controller
+# Step 3: NGINX reads this file and checks: "Is host = acme.com?" → YES!
+# Step 4: NGINX checks the path: "Is path = /api/platforms?" → YES!
+# Step 5: NGINX checks backend: "Send to platformservice-clusterip-srv:8080"
+# Step 6: Kubernetes Service finds a Platform Pod and sends request there
+# Step 7: Platform microservice processes the request
+# Step 8: Response comes back through the same path
+# Step 9: User sees the response in their browser
+#
+#
+# IMPORTANT PARTS OF THIS YAML FILE:
+# ===================================
+#
+# - apiVersion: networking.k8s.io/v1
+#   └─ Version of Kubernetes Ingress API (this is the current standard)
+#
+# - kind: Ingress
+#   └─ Tells Kubernetes: "This is an Ingress resource"
+#
+# - metadata.name: ingress-srv
+#   └─ Name of this ingress inside Kubernetes
+#
+# - metadata.annotations
+#   └─ kubernetes.io/ingress.class: nginx
+#      └─ Tells Kubernetes to use NGINX controller (not other controllers)
+#   └─ nginx.ingress.kubernetes.io/use-regex: "true"
+#      └─ Allows regex patterns in paths (advanced matching)
+#
+# - spec.rules
+#   └─ List of routing rules
+#
+# - host: acme.com
+#   └─ Only requests to this domain will match
+#
+# - http.paths
+#   └─ URL patterns to match
+#
+# - path: /api/platforms
+#   └─ The URL path to match
+#
+# - pathType: Prefix
+#   └─ "Prefix" = any URL starting with this path matches
+#   └─ Examples that match /api/platforms:
+#      - /api/platforms
+#      - /api/platforms/1
+#      - /api/platforms/all
+#
+# - backend.service.name: platformservice-clusterip-srv
+#   └─ Name of the Kubernetes Service to send traffic to
+#
+# - backend.service.port.number: 8080
+#   └─ Port number on that service
+#
+#
+# WHAT THIS FILE DOES IN PRACTICE:
+# =================================
+#
+# Request to acme.com/api/platforms
+#   → Sent to: platformservice-clusterip-srv (port 8080)
+#
+# Request to acme.com/api/command/platforms
+#   → Sent to: commandservice-clusterip-srv (port 8080)
+#
+# Request to acme.com/other/path
+#   → NOT handled by this ingress (would give 404 or default backend)
+#
+# Request to other-domain.com/api/platforms
+#   → NOT handled by this ingress (different host)
+
+
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-srv
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  rules:
+  - host: acme.com
+    http:
+      paths:
+      - path: /api/platforms
+        pathType: Prefix
+        backend:
+          service:
+            name: platformservice-clusterip-srv
+            port:
+              number: 8080
+      - path: /api/command/platforms
+        pathType: Prefix
+        backend:
+          service:
+            name: commandservice-clusterip-srv
+            port:
+              number: 8080

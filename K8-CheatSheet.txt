@@ -1,0 +1,105 @@
+# Kubernetes Cheat Sheet
+
+## Cluster and Namespace
+
+# List all namespaces in the cluster
+kubectl get namespaces
+
+# Show the current namespace
+kubectl config view --minify --output 'jsonpath={..namespace}'
+
+# Set the current namespace for kubectl
+kubectl config set-context --current --namespace=<namespace-name>
+
+# Show the current context
+kubectl config current-context
+
+## Deployments
+
+# Apply a manifest file to create or update resources
+kubectl apply -f .\platforms-depl.yaml
+
+# List all deployments
+kubectl get deployments
+
+# Describe a deployment
+kubectl describe deployment platformservice-deployment
+
+# Delete resources defined in a manifest file
+kubectl delete -f .\platforms-depl.yaml
+
+# Check deployment rollout status
+kubectl rollout status deployment/platformservice-deployment
+
+# View rollout history
+kubectl rollout history deployment/platformservice-deployment
+
+## Pods
+
+# List all running pods
+kubectl get pods
+
+# List pods in the ingress-nginx namespace
+kubectl get pods --namespace=ingress-nginx
+
+# Describe a pod
+kubectl describe pod <pod-name>
+
+# View pod logs
+kubectl logs <pod-name>
+
+# Follow pod logs in real time
+kubectl logs -f <pod-name>
+
+# Open an interactive shell in a pod
+kubectl exec -it <pod-name> -- /bin/sh
+
+## Services and Networking
+
+# List services
+kubectl get services
+
+# Describe a service
+kubectl describe service <service-name>
+
+# List ingress resources
+kubectl get ingress
+
+# Describe an ingress resource
+kubectl describe ingress <ingress-name>
+
+## ConfigMaps and Secrets
+
+# List ConfigMaps
+kubectl get configmaps
+
+# Describe a ConfigMap
+kubectl describe configmap <configmap-name>
+
+# List secrets
+kubectl get secrets
+
+# Describe a secret
+kubectl describe secret <secret-name>
+
+## Debugging and Inspection
+
+# Show all common resources in the current namespace
+kubectl get all
+
+# Output a resource as YAML
+kubectl get deployment platformservice-deployment -o yaml
+
+# View namespace events sorted by time
+kubectl get events --sort-by=.metadata.creationTimestamp
+
+## Useful Extras
+
+# Get all resources in a specific namespace
+kubectl get all -n <namespace-name>
+
+# Delete a pod manually
+kubectl delete pod <pod-name>
+
+# Restart a deployment
+kubectl rollout restart deployment/platformservice-deployment

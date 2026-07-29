@@ -1,0 +1,92 @@
+# Kubernetes Deployment Configuration for Platform Service
+# 
+# PURPOSE: This file defines a Kubernetes Deployment that manages the Platform Service microservice.
+# A Deployment ensures that a specified number of Pod replicas are running at all times.
+#
+# HOW TO APPLY:
+#   kubectl apply -f .\platforms-depl.yaml
+#
+# WHAT THIS DOES:
+#   - Creates a Deployment named 'platformservice-deployment'
+#   - Runs 1 replica (instance) of the platformservice container
+#   - Uses the image: rahul1994jh/platformservice:latest
+#   - Automatically restarts failed containers
+#   - Provides rolling updates for deployments
+#
+# STEP-BY-STEP EXPLANATION:
+#   1. apiVersion: Specifies Kubernetes API version (apps/v1 = stable version)
+#   2. kind: Defines this is a Deployment resource type
+#   3. metadata.name: Unique identifier for this deployment in the cluster
+#   4. spec.replicas: Number of Pod copies to maintain (1 = single instance)
+#   5. selector.matchLabels: Identifies which Pods this Deployment manages (app: platformservice)
+#   6. template: Defines the Pod template/blueprint for Deployment to create
+#   7. containers: Specifies the Docker container configuration
+#   8. image: Docker image to run (pulls from Docker Hub registry)
+#
+# USEFUL COMMANDS:
+#   kubectl get deployments              - List all deployments
+#   kubectl get pods                     - List all running pods
+#   kubectl describe deployment platformservice-deployment  - View details
+#   kubectl logs <pod-name>              - View container logs
+#   kubectl delete -f .\platforms-depl.yaml  - Delete the deployment
+#   kubectl rollout status deployment/platformservice-deployment  - Check rollout status
+
+ # Service specification
+ # Service type: ClusterIP exposes the service on a cluster-internal IP.
+ # Use NodePort or LoadBalancer if you need external access from outside the cluster.
+ # This Service selects Pods with the label 'app: platformservice' and routes
+ # traffic on port 8080 to the targetPort 8080 on the selected Pods.
+ #
+ # NOTES:
+ # - ClusterIP is ideal for internal communication between microservices.
+ # - To access this Service from outside the cluster for development, use
+ #   'kubectl port-forward svc/platformservice-clusterip-srv 8080:8080' or
+ #   create an Ingress or change type to NodePort/LoadBalancer.
+ # - To inspect the Service: kubectl get svc platformservice-clusterip-srv
+ # - To view endpoints (Pods backing the Service): kubectl get endpoints
+ #   platformservice-clusterip-srv
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: platformservice-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: platformservice
+  template:
+    metadata:
+      labels:
+        app: platformservice
+    spec:
+      containers:
+      - name: platformservice
+        image: rahul1994jh/platformservice:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: ASPNETCORE_URLS
+          value: http://+:8080
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: platformservice-clusterip-srv
+spec:
+  type: ClusterIP
+  selector:
+    app: platformservice
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+

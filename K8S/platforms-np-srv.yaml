@@ -1,0 +1,79 @@
+# ============================================================================
+# PLATFORM SERVICE - NODE PORT SERVICE
+# ============================================================================
+#
+# WHAT IS A NODEPORT SERVICE?
+#   A NodePort service exposes the application on a static port on each node.
+#   External traffic can access the service via <NodeIP>:<NodePort>.
+#   Port range: 30000-32767 (default), but can be customized.
+#
+# STEP-BY-STEP DEPLOYMENT:
+#   1. Check current cluster context:
+#      kubectl config current-context
+#
+#   2. Apply the service manifest:
+#      kubectl apply -f K8S/platforms-np-srv.yaml
+#
+#   3. Verify service creation:
+#      kubectl get svc platformnpservice-srv
+#
+#   4. Get the NodePort number (check PORT(S) column):
+#      kubectl describe svc platformnpservice-srv
+#
+#   5. Find a node's IP address:
+#      kubectl get nodes -o wide
+#
+#   6. Access the service:
+#      http://<NodeIP>:<NodePort>
+#      Example: http://192.168.1.100:30000
+#
+# DEPLOYMENT COMMANDS:
+#   kubectl apply -f K8S/platforms-np-srv.yaml
+#   kubectl describe svc platformnpservice-srv
+#
+# GET COMMANDS:
+#   kubectl get svc platformnpservice-srv                   # Get service info
+#   kubectl get svc platformnpservice-srv -o wide           # Detailed output
+#   kubectl get svc                                         # List all services
+#   kubectl get endpoints platformnpservice-srv             # View endpoints
+#   kubectl get pods -l app=platformservice                 # List related pods
+#   kubectl get nodes -o wide                               # List nodes with IPs
+#
+# INSPECT COMMANDS:
+#   kubectl describe svc platformnpservice-srv              # Full service details
+#   kubectl logs -l app=platformservice                     # View pod logs
+#   kubectl logs -l app=platformservice --tail=50           # Last 50 lines
+#
+# PORT FORWARDING:
+#   kubectl port-forward svc/platformnpservice-srv 8080:80  # Local access
+#
+# CLEANUP:
+#   kubectl delete svc platformnpservice-srv                # Delete service
+#
+# LEARNING RESOURCES:
+#   Official Kubernetes Documentation:
+#   - https://kubernetes.io/docs/concepts/services-networking/service/
+#   - https://kubernetes.io/docs/concepts/services-networking/service/#nodeport
+#
+#   Interactive Learning:
+#   - https://kubernetes.io/docs/tutorials/kubernetes-basics/expose/expose-intro/
+#
+#   Best Practices:
+#   - NodePort is best for development/testing, not production
+#   - For production, consider LoadBalancer or Ingress
+#   - Always use selectors and labels to manage services
+#
+# ============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: platformnpservice-srv
+spec:
+  type: NodePort
+  selector:
+    app: platformservice
+  ports:
+    - name: platformservice
+      protocol: TCP
+      port: 80
+      targetPort: 8080
