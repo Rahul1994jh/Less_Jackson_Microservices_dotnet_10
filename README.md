@@ -1,5 +1,7 @@
 # Less Jackson Microservices
 
+Course: https://youtu.be/DgVjEo3OGBI?si=-7wme82-oG4BsvxJ
+
 Two .NET 10 microservices that demonstrate a simple platform-and-commands workflow:
 
 - Platform Service stores and serves platform data.
