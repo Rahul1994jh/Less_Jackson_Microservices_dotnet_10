@@ -1,0 +1,80 @@
+Git Cheat Sheet
+===============
+
+Initialize a repository
+-----------------------
+git init
+
+Clone a repository
+-------------------
+git clone <repo-url>
+
+Check status
+------------
+git status
+
+Add files
+---------
+git add .
+git add <file>
+
+Commit changes
+--------------
+git commit -m "<message>"
+
+View history
+------------
+git log --oneline --decorate --graph --all
+
+Create a branch
+---------------
+git checkout -b <branch-name>
+
+auto create branch with switch
+------------------------------
+git switch -c <branch-name>
+
+Switch branches
+---------------
+git checkout <branch-name>
+git switch <branch-name>
+
+Merge a branch
+--------------
+git merge <branch-name>
+
+Pull latest changes
+-------------------
+git pull origin <branch-name>
+
+Push changes
+------------
+git push origin <branch-name>
+
+View remotes
+------------
+git remote -v
+
+Set remote URL
+--------------
+git remote add origin <repo-url>
+
+Undo changes
+------------
+git restore <file>
+git reset HEAD <file>
+
+Discard all local changes
+-------------------------
+git reset --hard
+
+Stash changes
+-------------
+git stash
+git stash pop
+
+Tag a release
+-------------
+git tag <tag-name>
+
+git push origin <tag-name>
