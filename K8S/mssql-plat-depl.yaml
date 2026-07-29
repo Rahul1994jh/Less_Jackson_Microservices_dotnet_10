@@ -1,0 +1,114 @@
+## MSSQL Kubernetes manifest
+##
+## Purpose:
+## - Deploy SQL Server in Kubernetes.
+## - Persist database files using a PVC.
+## - Expose the database internally with a ClusterIP Service.
+## - Expose the database externally with a LoadBalancer Service.
+##
+## Steps / what it does:
+## 1) Creates a Deployment named "mssql-depl".
+## 2) Runs the Microsoft SQL Server 2022 image.
+## 3) Sets required environment variables for SQL Server startup.
+## 4) Reads the SA password from a Kubernetes Secret named "mssql".
+## 5) Mounts persistent storage at /var/opt/mssql/data.
+## 6) Creates an internal ClusterIP Service for in-cluster access.
+## 7) Creates a LoadBalancer Service for external access when needed.
+##
+## Why both services are included:
+## - ClusterIP: preferred for application-to-database traffic inside the cluster.
+## - LoadBalancer: useful for local dev, debugging, or direct access from outside
+##   Kubernetes. In production, external database exposure should be reviewed
+##   carefully.
+##
+## Useful commands:
+## - Apply: kubectl apply -f K8S/mssql-plat-depl.yaml
+## - Check pods: kubectl get pods
+## - Check services: kubectl get svc
+## - Check volumes: kubectl get pvc
+## - View logs: kubectl logs deploy/mssql-depl
+##   NOTE: Check logs post-deployment for any errors such as:
+##   - Password not matching SQL Server password policy
+##   - Container initialization failures
+##   - Secret not found errors
+##   - Any other startup issues
+## - Delete: kubectl delete -f K8S/mssql-plat-depl.yaml
+##
+## Prerequisite:
+## - Create a Secret named "mssql" with key "SA_PASSWORD" before applying.
+
+
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mssql-depl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mssql
+  template:
+    metadata:
+      labels:
+        app: mssql
+    spec:
+      containers:
+        - name: mssql
+          image: mcr.microsoft.com/mssql/server:2022-latest
+          ports:
+            - containerPort: 1433
+          env:
+            # SQL Server Express edition
+            - name: MSSQL_PID
+              value: "Express"
+            # Required by Microsoft SQL Server container images
+            - name: ACCEPT_EULA
+              value: "Y"
+            # Read SA password from the secret "mssql"
+            - name: SA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mssql
+                  key: SA_PASSWORD
+          volumeMounts:
+            # Persist SQL Server data files
+            - name: mssqldb
+              mountPath: /var/opt/mssql/data
+      volumes:
+        # Persistent storage claim used by SQL Server data directory
+        - name: mssqldb
+          persistentVolumeClaim:
+            claimName: mssql-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mssql-clusterip-srv
+spec:
+  # Internal-only service for pod-to-pod communication inside Kubernetes
+  type: ClusterIP
+  selector:
+    app: mssql
+  ports:
+    - protocol: TCP
+      port: 1433
+      targetPort: 1433
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mssql-loadbalancer-srv
+spec:
+  # External service that exposes SQL Server via a cloud load balancer
+  type: LoadBalancer
+  selector:
+    app: mssql
+  ports:
+    - protocol: TCP
+      port: 1433
+      targetPort: 1433
+
+      
+
+
