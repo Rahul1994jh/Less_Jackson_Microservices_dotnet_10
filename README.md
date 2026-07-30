@@ -39,7 +39,7 @@ flowchart LR
   - HTTP: `http://localhost:5054`
   - HTTPS: `https://localhost:7221`
 - Container port: `8080`
-- Storage: EF Core in-memory database named `InMem`
+- Storage: EF Core with SQL Server via `PlatformConn`
 - Startup seeding: `Dot Net`, `SQL Server Express`, and `Kubernetes`
 - Outbound sync target: `http://commandservice-clusterip-srv:8080/api/command/platforms`
 
@@ -93,6 +93,36 @@ flowchart LR
    curl http://localhost:5054/api/platforms
    curl http://localhost:5073/api/command/platforms
    ```
+
+### EF Core migrations for Platform Service
+
+The Platform Service uses EF Core migrations against SQL Server. The repo does not have a root solution file, so run the commands from the [PlatformService](PlatformService) folder.
+
+Install the EF tool once on your machine:
+
+```powershell
+dotnet tool install --global dotnet-ef
+```
+
+Create the initial migration:
+
+```powershell
+cd PlatformService
+dotnet ef migrations add initialmigration
+```
+
+Apply the migration to the database:
+
+```powershell
+dotnet ef database update
+```
+
+Useful migration notes:
+
+- The command you run is `dotnet ef`, even though the global tool package is `dotnet-ef`.
+- Run the commands from the PlatformService project folder so EF can find the project and startup assembly.
+- Make sure the SQL Server connection string in [PlatformService/appsettings.Development.json](PlatformService/appsettings.Development.json) points to a running database before you add or apply migrations.
+- During production startup, [PrepDb](PlatformService/Data/PrepDb.cs) calls `context.Database.Migrate()` before seeding the sample platforms.
 
 ### Local run with Docker
 
@@ -216,6 +246,6 @@ Example payload:
 
 ## Notes
 
-- Platform Service currently uses EF Core InMemory, so no external database is required for first-time setup.
+- Platform Service currently uses EF Core migrations with SQL Server, so you need a reachable SQL Server instance for migration and runtime startup.
 - The repo currently does not include a solution file at the root, so run each service from its own project folder.
 - The included `K8-CheatSheet.txt` has extra `kubectl` examples if you want a quick reference.
