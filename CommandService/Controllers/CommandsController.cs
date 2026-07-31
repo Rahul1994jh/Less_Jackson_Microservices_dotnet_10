@@ -30,7 +30,7 @@ public class CommandsController(ICommandRepo commandRepo) : ControllerBase
 	}
 
     [HttpGet("{commandId}")]
-	public ActionResult<IEnumerable<CommandReadDto>> GetCommand(int platformId, int commandId)
+	public ActionResult<IEnumerable<CommandReadDto>> GetCommandForPlatform(int platformId, int commandId)
 	{
 		if (!commandRepo.PlatformExists(platformId))
 		{
@@ -45,5 +45,24 @@ public class CommandsController(ICommandRepo commandRepo) : ControllerBase
 		}
 
 		return Ok(command.Adapt<CommandReadDto>());
+	}
+
+
+	[HttpPost]
+	public ActionResult<CommandReadDto> CreateCommandForPlatform(int platformId, CommandCreateDto commandCreateDto)
+	{
+		if (!commandRepo.PlatformExists(platformId))
+		{
+			return NotFound();
+		}
+
+		var command = commandCreateDto.Adapt<Command>();
+		commandRepo.CreateCommand(platformId, command);
+		commandRepo.SaveChanges();
+
+		var commandReadDto = command.Adapt<CommandReadDto>();
+
+		return CreatedAtAction(nameof(GetCommandForPlatform),
+			new { platformId = platformId, commandId = commandReadDto.Id }, commandReadDto);
 	}
 }
