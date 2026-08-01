@@ -1,10 +1,10 @@
 using System.ComponentModel.DataAnnotations;
-using Mapster;
 
 namespace PlatformService.Models
 {
     public record PlatformReadDto(int Id, string Name, string Publisher, string Cost);
     public record PlatformCreateDto(string Name, string Publisher, string Cost);
+    public record PlatformPublishedDto(int Id, string Name, string Event);
     public class Platform
     {
         [Key]
