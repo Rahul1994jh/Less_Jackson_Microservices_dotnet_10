@@ -18,12 +18,12 @@ namespace CommandService.Controllers
             return Ok(platforms.Adapt<List<PlatformReadDto>>());
         }
 
-        // [HttpPost]
-        // public ActionResult Post(PlatformCreateDto platformCreateDto)
-        // {
-        //     commandRepo.CreatePlatform(platformCreateDto.Adapt<Platform>());
-        //     commandRepo.SaveChanges();
-        //     return Ok();
-        // }
+        [HttpPost]
+        public ActionResult Post(PlatformCreateDto platformCreateDto)
+        {
+            commandRepo.CreatePlatform(platformCreateDto.Adapt<Platform>());
+            commandRepo.SaveChanges();
+            return Ok();
+        }
     }
 }

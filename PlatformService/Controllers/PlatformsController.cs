@@ -1,5 +1,6 @@
 using Mapster;
 using Microsoft.AspNetCore.Mvc;
+using PlatformService.AsyncDataServices;
 using PlatformService.Data;
 using PlatformService.SyncDataService.Http;
 
@@ -7,10 +8,11 @@ namespace PlatformService.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class PlatformsController(IPlatformRepo platformRepo, ICommandDataClient commandDataClient) : ControllerBase
+    public class PlatformsController(IPlatformRepo platformRepo, ICommandDataClient commandDataClient, IMessageBusClient messageBusClient) : ControllerBase
     {
         private readonly IPlatformRepo _platformRepo = platformRepo;
         private readonly ICommandDataClient _commandDataClient = commandDataClient;
+        private readonly IMessageBusClient _messageBusClient = messageBusClient;
 
         [HttpGet]
         public ActionResult<IEnumerable<Models.PlatformReadDto>> Get()
@@ -19,7 +21,7 @@ namespace PlatformService.Controllers
             return Ok(platforms.Adapt<List<Models.PlatformReadDto>>());
         }
 
-         [HttpGet("{id}")]
+        [HttpGet("{id}")]
         public ActionResult<Models.PlatformReadDto> Get(int id)
         {
             var platform = _platformRepo.GetPlatformById(id);
@@ -37,7 +39,7 @@ namespace PlatformService.Controllers
             {
                 return BadRequest(ModelState);
             }
-            
+
             var platform = platformDto.Adapt<Models.Platform>();
             _platformRepo.CreatePlatform(platform);
             _platformRepo.SaveChanges();
@@ -50,7 +52,16 @@ namespace PlatformService.Controllers
             {
                 Console.WriteLine($"--> Could not send synchronously: {ex.Message}");
             }
-           
+
+            try
+            {
+                await _messageBusClient.PublishNewPlatformAsync(platform.Adapt<Models.PlatformPublishedDto>());
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"--> Could not send asynchronously: {ex.Message}");
+            }
+
             return CreatedAtAction(nameof(Get), new { id = platform.Id }, platform.Adapt<Models.PlatformReadDto>());
         }
     }
