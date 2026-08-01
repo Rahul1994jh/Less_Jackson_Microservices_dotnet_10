@@ -1,0 +1,98 @@
+
+# RabbitMQ Kubernetes Deployment Configuration
+# This file defines three resources: a Deployment, a ClusterIP Service, and a LoadBalancer Service
+# Purpose: Deploy RabbitMQ message broker in Kubernetes cluster with internal and external access
+
+# STEP 1: RabbitMQ Deployment
+# Creates a pod running RabbitMQ with management UI enabled
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq-depl  # Name of the deployment resource
+spec:
+  replicas: 1  # Run a single instance of RabbitMQ
+  selector:
+    matchLabels:
+      app: rabbitmq  # Select pods with label "app: rabbitmq"
+  template:
+    metadata:
+      labels:
+        app: rabbitmq  # Label this pod as RabbitMQ for service discovery
+    spec:
+      containers:
+        - name: rabbitmq  # Container name
+          image: rabbitmq:3-management  # RabbitMQ image with management UI plugin
+          ports:
+            - containerPort: 5672   # AMQP protocol port for message broker
+              name: rbmq-msg-port   # Named port for messaging
+            - containerPort: 15672  # Management UI web interface port
+              name: rbmq-mgmt-port  # Named port for management UI
+
+---
+# STEP 2: ClusterIP Service (Internal Access)
+# Exposes RabbitMQ internally within the Kubernetes cluster
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-clusterip-srv  # Internal service name for DNS resolution
+  labels:
+    app: rabbitmq  # Label for organizing resources
+spec:
+  type: ClusterIP  # Internal cluster-only access (default)
+  selector:
+    app: rabbitmq  # Route traffic to pods with this label
+  ports:
+    - name: rbmq-msg-port  # AMQP messaging port
+      protocol: TCP
+      port: 5672           # Service port (exposed internally)
+      targetPort: 5672     # Container port (where traffic is forwarded)
+    - name: rbmq-mgmt-port # Management UI port
+      protocol: TCP
+      port: 15672          # Service port (exposed internally)
+      targetPort: 15672    # Container port (where traffic is forwarded)
+
+---
+# STEP 3: LoadBalancer Service (External Access)
+# Exposes RabbitMQ externally via cloud provider's load balancer
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-loadbalancer-srv  # External service name
+spec:
+  type: LoadBalancer  # External load balancer service
+  selector:
+    app: rabbitmq  # Route traffic to pods with this label
+  ports:
+    - name: rbmq-msg-port  # AMQP messaging port
+      protocol: TCP
+      port: 5672           # External port (exposed via load balancer)
+      targetPort: 5672     # Container port (where traffic is forwarded)
+    - name: rbmq-mgmt-port # Management UI port
+      protocol: TCP
+      port: 15672          # External port (exposed via load balancer)
+      targetPort: 15672    # Container port (where traffic is forwarded)
+
+# Local connection instructions
+# To connect to RabbitMQ from your local machine, use one of the following methods:
+# 1) Using kubectl port-forward (recommended for local development)
+#    - Forward AMQP port (5672):
+#        kubectl port-forward deploy/rabbitmq-depl 5672:5672
+#      Then connect your app to amqp://localhost:5672
+#    - Forward Management UI (15672):
+#        kubectl port-forward deploy/rabbitmq-depl 15672:15672
+#      Then open http://localhost:15672 (default user: guest, password: guest for default image)
+#
+# 2) Using the LoadBalancer service (cloud environments)
+#    - Get external IP:
+#        kubectl get svc rabbitmq-loadbalancer-srv
+#    - Connect to AMQP using EXTERNAL_IP:5672 and open Management UI at http://EXTERNAL_IP:15672
+#
+# 3) Using NodePort (if LoadBalancer not available)
+#    - Edit the Service type to NodePort and optionally specify nodePort values.
+#    - Connect to a node's IP at the nodePort for AMQP and management UI.
+#
+# Notes:
+#  - Default RabbitMQ image creates a default user (username: guest, password: guest) only accessible from localhost.
+#    For remote access create a user or enable proper credentials and permissions.
+#  - For production, secure connections (TLS), authentication, and network policies are recommended.
+
