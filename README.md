@@ -1,5 +1,7 @@
 # Less Jackson Microservices
 
+NOTE: An expanded, reorganized version of this documentation is available at [README_UPDATED.md](README_UPDATED.md). Use the updated guide for run and deployment instructions.
+
 Course: https://youtu.be/DgVjEo3OGBI?si=-7wme82-oG4BsvxJ
 
 Two .NET 10 microservices that demonstrate a simple platform-and-commands workflow:
@@ -221,6 +223,52 @@ kubectl logs -l app=commandservice
 kubectl rollout status deployment/platformservice-deployment
 kubectl rollout status deployment/commandservice-deployment
 ```
+
+## RabbitMQ Messaging
+
+This repository includes optional RabbitMQ-based messaging used to publish platform-created events from the Platform Service and consume those events in the Command Service.
+
+- K8s manifest: [K8S/rabbitmq-depl.yaml](K8S/rabbitmq-depl.yaml)
+- Exchange: `trigger` (fanout)
+- Queue: `commandqueue` (bound to `trigger`)
+- Config keys: `RabbitMQHost` and `RabbitMQPort` (see [PlatformService/appsettings.Development.json](PlatformService/appsettings.Development.json) and [CommandService/appsettings.Development.json](CommandService/appsettings.Development.json))
+
+Local development options:
+
+- Run a local RabbitMQ container with management UI:
+
+```powershell
+docker run -d --hostname rabbitmq --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management
+```
+
+- Or use the included Kubernetes manifest and port-forward for local access:
+
+```powershell
+kubectl apply -f .\K8S\rabbitmq-depl.yaml
+kubectl port-forward deploy/rabbitmq-depl 5672:5672 15672:15672
+# Management UI: http://localhost:15672 (default: guest/guest for the official image)
+```
+
+How the services use RabbitMQ:
+
+- `PlatformService` publishes platform-created events via `IMessageBusClient` implemented by `RabbitMqMessageBusClient` (registered in [PlatformService/Program.cs](PlatformService/Program.cs)).
+- `CommandService` subscribes via the `MessageBusSubscriber` hosted service (registered in [CommandService/Program.cs](CommandService/Program.cs)).
+
+Example environment variables / production settings:
+
+- In production/Kubernetes, the services are configured to use the internal ClusterIP service name `rabbitmq-clusterip-srv` (see [PlatformService/appsettings.Production.json](PlatformService/appsettings.Production.json)).
+- Example env vars for containers:
+
+```powershell
+RABBITMQHOST=rabbitmq-clusterip-srv
+RABBITMQPORT=5672
+```
+
+Notes and security:
+
+- The included manifest and examples are for development and testing. For production, enable authentication, TLS, persistent storage, and proper user management (do not rely on the default `guest` account).
+- Prefer using a managed RabbitMQ service or a clustered, stateful deployment with PVCs for durability.
+
 
 ## API Endpoints
 
