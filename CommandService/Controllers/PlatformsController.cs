@@ -21,8 +21,13 @@ namespace CommandService.Controllers
         [HttpPost]
         public ActionResult Post(PlatformCreateDto platformCreateDto)
         {
-            commandRepo.CreatePlatform(platformCreateDto.Adapt<Platform>());
-            commandRepo.SaveChanges();
+            // if (commandRepo.ExternalPlatformExists(platformCreateDto.Id))
+            // {
+            //     return BadRequest("Platform already exists.");
+            // }
+
+            // commandRepo.CreatePlatform(platformCreateDto.Adapt<Platform>());
+            // commandRepo.SaveChanges();
             return Ok();
         }
     }

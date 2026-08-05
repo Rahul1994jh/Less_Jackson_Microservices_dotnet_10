@@ -2,8 +2,10 @@ using System.ComponentModel.DataAnnotations;
 
 namespace CommandService.Models
 {
-    public record PlatformCreateDto(string Name);
+    public record PlatformCreateDto(int Id, string Name);
     public record PlatformReadDto(int Id, string Name);
+    public record PlatformPublishedDto(int Id, string Name, string Event);
+    public record GenericEventDto(string Event);
     public class Platform
     {
         [Key]
