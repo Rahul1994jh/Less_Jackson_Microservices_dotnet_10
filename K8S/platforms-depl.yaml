@@ -1,5 +1,5 @@
 # Kubernetes Deployment Configuration for Platform Service
-# 
+#
 # PURPOSE: This file defines a Kubernetes Deployment that manages the Platform Service microservice.
 # A Deployment ensures that a specified number of Pod replicas are running at all times.
 #
@@ -31,20 +31,23 @@
 #   kubectl delete -f .\platforms-depl.yaml  - Delete the deployment
 #   kubectl rollout status deployment/platformservice-deployment  - Check rollout status
 
- # Service specification
- # Service type: ClusterIP exposes the service on a cluster-internal IP.
- # Use NodePort or LoadBalancer if you need external access from outside the cluster.
- # This Service selects Pods with the label 'app: platformservice' and routes
- # traffic on port 8080 to the targetPort 8080 on the selected Pods.
- #
- # NOTES:
- # - ClusterIP is ideal for internal communication between microservices.
- # - To access this Service from outside the cluster for development, use
- #   'kubectl port-forward svc/platformservice-clusterip-srv 8080:8080' or
- #   create an Ingress or change type to NodePort/LoadBalancer.
- # - To inspect the Service: kubectl get svc platformservice-clusterip-srv
- # - To view endpoints (Pods backing the Service): kubectl get endpoints
- #   platformservice-clusterip-srv
+# Service specification
+# Service type: ClusterIP exposes the service on a cluster-internal IP.
+# Use NodePort or LoadBalancer if you need external access from outside the cluster.
+# This Service selects Pods with the label 'app: platformservice' and routes
+# traffic on port 8080 (HTTP) and port 666 (gRPC) to their respective targetPorts
+# on the selected Pods.
+#
+# NOTES:
+# - ClusterIP is ideal for internal communication between microservices.
+# - Two ports are exposed: 8080 for HTTP and 666 for gRPC communication.
+# - To access this Service from outside the cluster for development, use
+#   'kubectl port-forward svc/platformservice-clusterip-srv 8080:8080' for HTTP or
+#   'kubectl port-forward svc/platformservice-clusterip-srv 666:666' for gRPC, or
+#   create an Ingress or change type to NodePort/LoadBalancer.
+# - To inspect the Service: kubectl get svc platformservice-clusterip-srv
+# - To view endpoints (Pods backing the Service): kubectl get endpoints
+#   platformservice-clusterip-srv
 
 apiVersion: apps/v1
 kind: Deployment
@@ -61,21 +64,21 @@ spec:
         app: platformservice
     spec:
       containers:
-      - name: platformservice
-        image: rahul1994jh/platformservice:latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 8080
-        env:
-        - name: ASPNETCORE_URLS
-          value: http://+:8080
-        resources:
-          requests:
-            cpu: 100m
-            memory: 128Mi
-          limits:
-            cpu: 250m
-            memory: 256Mi
+        - name: platformservice
+          image: rahul1994jh/platformservice:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_URLS
+              value: http://+:8080
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
 ---
 apiVersion: v1
 kind: Service
@@ -86,7 +89,11 @@ spec:
   selector:
     app: platformservice
   ports:
-    - protocol: TCP
+    - name: platformservice
+      protocol: TCP
       port: 8080
       targetPort: 8080
-
+    - name: platformservicegrpc
+      protocol: TCP
+      port: 666
+      targetPort: 666
